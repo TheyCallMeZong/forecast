@@ -12,9 +12,11 @@ from plotly.offline import init_notebook_mode, plot
 from plotly import graph_objs as go
 from IPython.display import display
 from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error, mean_squared_error
+from statsmodels.tsa.holtwinters import Holt, ExponentialSmoothing
 
 init_notebook_mode(connected=True)
 warnings.simplefilter("ignore")
+
 
 def plotly_df(df, title = ''):
     data = []
@@ -157,6 +159,7 @@ print('mae: ', mae)
 #средняя абсолютная ошибка в %
 mape = mean_absolute_percentage_error(data_set_test, forecast)
 print(f'mape: {mape}%')
+print("END ARIMA")
 #по моим данных следующие значения
 #mse:  1636.8611498373427
 #mae:  1404.5483420297503
@@ -167,5 +170,45 @@ print(f'mape: {mape}%')
 #Значит, точность прогноза составляет – 99,7%.
 #Такая точность прогноза является хорошей
 
+#для отчета
+#print(data_set_test.tail(35))
 
-#прогнозирование на основе модели
+
+#прогнозирование на основе модели Двойного линейного сглаживания, т.к. он учитывает тендецию, в отличие от модели 1 порядка
+model2 = ExponentialSmoothing(np.asarray(data_set_train)).fit()
+forecast2 = model2.forecast(35)
+data_set['forecast'] = ''
+data_set['forecast2'] = [None] * len(data_set_train) + list(forecast2)
+data_set.plot()
+plt.show()
+
+#адекватность модели
+myres = pd.DataFrame(model2.resid)
+fig, ax = plt.subplots(1, 2)
+myres.plot(title="Residuals", ax=ax[0])
+myres.plot(kind='kde', title='Density', ax=ax[1])
+plt.show()
+
+#оценка качества модели
+#среднеквадратичное отклонение
+mse = np.sqrt(mean_squared_error(data_set_test, forecast2))
+print('mse: ', mse)
+
+#средняя абсолютная ошибка
+mae = mean_absolute_error(data_set_test, forecast2)
+print('mae: ', mae)
+
+#средняя абсолютная ошибка в %
+mape = mean_absolute_percentage_error(data_set_test, forecast2)
+print(f'mape: {mape}%')
+print("END LIN EXP")
+
+#по моим данных следующие значения
+#mse:  1547.4019397275374
+#mae:  1320.924408869623
+#mape: 0.2829626590338698%
+#Величина MAPE подсчитанная программой получилась 0,28 %.
+#Имея данные, не использованные в прогнозе,
+#мы получили MAPE, равную 0,28%.
+#Значит, точность прогноза составляет – 99,72%.
+#Такая точность прогноза является хорошей
